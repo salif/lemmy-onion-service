@@ -5,15 +5,15 @@
   database: {
     host: postgres
     user: "lemmy"
-    password: ""
+    password: "SED2Z"
     database: "lemmy"
   }
-  hostname: ""
+  hostname: "SED1Z"
   bind: "0.0.0.0"
   port: 8536
   tls_enabled: false
   pictrs: {
     url: "http://pictrs:8080/"
-    api_key: ""
+    api_key: "SED3Z"
   }
 }

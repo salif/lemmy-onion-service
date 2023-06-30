@@ -23,7 +23,7 @@ services:
     image: nginx:1-alpine
     volumes:
       - ./nginx_internal.conf:/etc/nginx/nginx.conf:ro,Z
-      - ./nginx.conf:/etc/nginx/sites-available/${domain}.conf:ro,Z
+    #  - ./nginx.conf:/etc/nginx/sites-available/${domain}.conf:ro,Z
     restart: always
     logging: *default-logging
     depends_on:
@@ -31,7 +31,7 @@ services:
       - lemmy-ui
 
   lemmy:
-    image: ${lemmy_docker_image}
+    image: dessalines/lemmy:0.18.0
     hostname: lemmy
     restart: always
     logging: *default-logging
@@ -44,7 +44,7 @@ services:
       - pictrs
 
   lemmy-ui:
-    image: ${lemmy_docker_ui_image}
+    image: dessalines/lemmy-ui:0.18.0
     environment:
       - LEMMY_UI_LEMMY_INTERNAL_HOST=lemmy:8536
       - LEMMY_UI_LEMMY_EXTERNAL_HOST=${domain}

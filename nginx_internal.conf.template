@@ -1,0 +1,119 @@
+worker_processes auto;
+events {
+    worker_connections 1024;
+}
+http {
+    # Establish a rate limit for the hidden service address
+    limit_req_zone $binary_remote_addr zone=SED1Z_ratelimit:10m rate=1r/s;
+
+    # Add tor-specific upstream aliases as a visual aid to
+    # avoid editing the incorrect server block in the future
+    upstream lemmy-tor {
+        server "lemmy:8536";
+    }
+    upstream lemmy-ui-tor {
+        server "lemmy-ui:1234";
+    }
+
+    # Add a copy of your current internet-facing configuration with
+    # "listen" and "server_listen" modified to send all traffic
+    # over the Tor network, incorporating the visual upstream aliases
+    # above.
+    server {
+        # Tell nginx to listen on the hidden service port
+        listen 80;
+
+        # Set server_name to the contents of the file:
+        # /var/lib/tor/hidden_lemmy_service/hostname
+        server_name SED1Z;
+
+        # Hide nginx version
+        server_tokens off;
+
+        # Enable compression for JS/CSS/HTML bundle, for improved client load times.
+        # It might be nice to compress JSON, but leaving that out to protect against potential
+        # compression+encryption information leak attacks like BREACH.
+        gzip on;
+        gzip_types text/css application/javascript image/svg+xml;
+        gzip_vary on;
+
+        # Only connect to this site via HTTPS for the two years
+        add_header Strict-Transport-Security "0";
+
+        # Various content security headers
+        add_header Referrer-Policy "same-origin";
+        add_header X-Content-Type-Options "nosniff";
+        add_header X-Frame-Options "DENY";
+        add_header X-XSS-Protection "1; mode=block";
+
+        # Upload limit for pictrs
+        client_max_body_size 20M;
+
+        # frontend
+        location / {
+            # distinguish between ui requests and backend
+            # don't change lemmy-ui or lemmy here, they refer to the upstream definitions on top
+            set $proxpass "http://lemmy-ui-tor";
+
+            if ($http_accept = "application/activity+json") {
+                set $proxpass "http://lemmy-tor";
+            }
+            if ($http_accept = "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"") {
+                set $proxpass "http://lemmy-tor";
+            }
+            if ($request_method = POST) {
+                set $proxpass "http://lemmy-tor";
+            }
+            proxy_pass $proxpass;
+
+            rewrite ^(.+)/+$ $1 permanent;
+
+            # Send actual client IP upstream
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        # backend
+        location ~ ^/(api|feeds|nodeinfo|.well-known) {
+            proxy_pass "http://lemmy-tor";
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+
+            # Rate limit
+            limit_req zone=SED1Z_ratelimit burst=30 nodelay;
+
+            # Add IP forwarding headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        # pictrs only - for adding browser cache control.
+        location ~ ^/(pictrs) {
+            # allow browser cache, images never update, we can apply long term cache
+            expires 120d;
+            add_header Pragma "public";
+            add_header Cache-Control "public";
+
+            proxy_pass "http://lemmy-tor";
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+
+            # Rate limit
+            limit_req zone=SED1Z_ratelimit burst=30 nodelay;
+
+            # Add IP forwarding headers
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        # Redirect pictshare images to pictrs
+        location ~ /pictshare/(.*)$ {
+            return 301 /pictrs/image/$1;
+        }
+    }
+}
