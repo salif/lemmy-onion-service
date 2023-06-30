@@ -1,0 +1,6 @@
+SOCKSPort 0
+SOCKSPolicy reject *
+DataDirectory /var/lib/tor
+
+HiddenServiceDir /var/lib/tor/hidden_lemmy_service/
+HiddenServicePort 80 proxy:80

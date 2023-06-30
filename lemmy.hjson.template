@@ -1,0 +1,19 @@
+{
+  # for more info about the config, check out the documentation
+  # https://join-lemmy.org/docs/en/administration/configuration.html
+
+  database: {
+    host: postgres
+    user: "lemmy"
+    password: ""
+    database: "lemmy"
+  }
+  hostname: ""
+  bind: "0.0.0.0"
+  port: 8536
+  tls_enabled: false
+  pictrs: {
+    url: "http://pictrs:8080/"
+    api_key: ""
+  }
+}
