@@ -63,7 +63,7 @@ services:
     # we can set options to pictrs like this, here we set max. image size and forced format for conversion
     # entrypoint: /sbin/tini -- /usr/local/bin/pict-rs -p /mnt -m 4 --image-format webp
     environment:
-      - PICTRS__API_KEY=${pictrs_api_key}
+      - PICTRS__API_KEY=${postgres_password}
       - RUST_LOG=debug
       - RUST_BACKTRACE=full
       - PICTRS__MEDIA__VIDEO_CODEC=vp9

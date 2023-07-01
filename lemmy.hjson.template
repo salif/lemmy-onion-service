@@ -14,6 +14,6 @@
   tls_enabled: false
   pictrs: {
     url: "http://pictrs:8080/"
-    api_key: "SED3Z"
+    api_key: "SED2Z"
   }
 }
