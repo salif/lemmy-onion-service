@@ -1,16 +1,48 @@
 worker_processes auto;
+
 events {
     worker_connections 1024;
 }
+
 http {
+    # We construct a string consistent of the "request method" and "http accept header"
+    # and then apply soem ~simply regexp matches to that combination to decide on the
+    # HTTP upstream we should proxy the request to.
+    #
+    # Example strings:
+    #
+    #   "GET:application/activity+json"
+    #   "GET:text/html"
+    #   "POST:application/activity+json"
+    #
+    # You can see some basic match tests in this regex101 matching this configuration
+    # https://regex101.com/r/vwMJNc/1
+    #
+    # Learn more about nginx maps here http://nginx.org/en/docs/http/ngx_http_map_module.html
+    map "$request_method:$http_accept" $proxpass {
+        # If no explicit matches exists below, send traffic to lemmy-ui
+        default "http://lemmy-ui-tor";
+
+        # GET/HEAD requests that accepts ActivityPub or Linked Data JSON should go to lemmy.
+        #
+        # These requests are used by Mastodon and other fediverse instances to look up profile information,
+        # discover site information and so on.
+        "~^(?:GET|HEAD):.*?application\/(?:activity|ld)\+json" "http://lemmy-tor";
+
+        # All non-GET/HEAD requests should go to lemmy
+        #
+        # Rather than calling out POST, PUT, DELETE, PATCH, CONNECT and all the verbs manually
+        # we simply negate the GET|HEAD pattern from above and accept all possibly $http_accept values
+        "~^(?!(GET|HEAD)).*:" "http://lemmy-tor";
+    }
+
     # Establish a rate limit for the hidden service address
     limit_req_zone $binary_remote_addr zone=SED1Z_ratelimit:10m rate=1r/s;
 
-    # Add tor-specific upstream aliases as a visual aid to
-    # avoid editing the incorrect server block in the future
     upstream lemmy-tor {
         server "lemmy:8536";
     }
+
     upstream lemmy-ui-tor {
         server "lemmy-ui:1234";
     }
@@ -37,33 +69,19 @@ http {
         gzip_types text/css application/javascript image/svg+xml;
         gzip_vary on;
 
+        # Upload limit, relevant for pictrs
+        client_max_body_size 20M;
+
         # Only connect to this site via HTTPS for the two years
         add_header Strict-Transport-Security "0";
 
         # Various content security headers
-        add_header Referrer-Policy "same-origin";
-        add_header X-Content-Type-Options "nosniff";
-        add_header X-Frame-Options "DENY";
+        add_header X-Frame-Options SAMEORIGIN;
+        add_header X-Content-Type-Options nosniff;
         add_header X-XSS-Protection "1; mode=block";
-
-        # Upload limit for pictrs
-        client_max_body_size 20M;
 
         # frontend
         location / {
-            # distinguish between ui requests and backend
-            # don't change lemmy-ui or lemmy here, they refer to the upstream definitions on top
-            set $proxpass "http://lemmy-ui-tor";
-
-            if ($http_accept = "application/activity+json") {
-                set $proxpass "http://lemmy-tor";
-            }
-            if ($http_accept = "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"") {
-                set $proxpass "http://lemmy-tor";
-            }
-            if ($request_method = POST) {
-                set $proxpass "http://lemmy-tor";
-            }
             proxy_pass $proxpass;
 
             rewrite ^(.+)/+$ $1 permanent;
@@ -105,15 +123,10 @@ http {
             # Rate limit
             limit_req zone=SED1Z_ratelimit burst=30 nodelay;
 
-            # Add IP forwarding headers
+            # Send actual client IP upstream
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header Host $host;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        }
-
-        # Redirect pictshare images to pictrs
-        location ~ /pictshare/(.*)$ {
-            return 301 /pictrs/image/$1;
         }
     }
 }

@@ -31,12 +31,16 @@ services:
       - lemmy-ui
 
   lemmy:
-    image: dessalines/lemmy:0.18.0
+    image: dessalines/lemmy:0.18.1-rc.9
     hostname: lemmy
     restart: always
     logging: *default-logging
     environment:
       - RUST_LOG="warn"
+    ports:
+      # prometheus metrics available at the path /metrics on port 10002 by default
+      # enable prometheus metrics by setting the CARGO_BUILD_FEATURES build arg above to "prometheus-metrics"
+      - "10002:10002"
     volumes:
       - ./lemmy.hjson:/config/config.hjson:Z
     depends_on:
@@ -44,11 +48,12 @@ services:
       - pictrs
 
   lemmy-ui:
-    image: dessalines/lemmy-ui:0.18.0
+    image: dessalines/lemmy-ui:0.18.1-rc.10
     environment:
       - LEMMY_UI_LEMMY_INTERNAL_HOST=lemmy:8536
       - LEMMY_UI_LEMMY_EXTERNAL_HOST=${domain}
       - LEMMY_UI_HTTPS=false
+      - LEMMY_UI_DEBUG=true
     volumes:
       - ./volumes/lemmy-ui/extra_themes:/app/extra_themes
     depends_on:
