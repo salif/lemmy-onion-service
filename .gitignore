@@ -1,4 +1,4 @@
 /volumes/
-.env
+/.env
 /lemmy.hjson
 /nginx_internal.conf

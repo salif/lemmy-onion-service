@@ -20,9 +20,10 @@ services:
     logging: *default-logging
 
   proxy:
-    image: nginx:1-alpine
+    image: docker.io/library/nginx
     volumes:
       - ./nginx_internal.conf:/etc/nginx/nginx.conf:ro,Z
+      - ./proxy_params:/etc/nginx/proxy_params:ro,Z
     #  - ./nginx.conf:/etc/nginx/sites-available/${domain}.conf:ro,Z
     restart: always
     logging: *default-logging
@@ -31,16 +32,12 @@ services:
       - lemmy-ui
 
   lemmy:
-    image: dessalines/lemmy:0.18.1-rc.9
+    image: docker.io/dessalines/lemmy:0.19.0-rc.2
     hostname: lemmy
     restart: always
     logging: *default-logging
     environment:
       - RUST_LOG="warn"
-    ports:
-      # prometheus metrics available at the path /metrics on port 10002 by default
-      # enable prometheus metrics by setting the CARGO_BUILD_FEATURES build arg above to "prometheus-metrics"
-      - "10002:10002"
     volumes:
       - ./lemmy.hjson:/config/config.hjson:Z
     depends_on:
@@ -48,12 +45,11 @@ services:
       - pictrs
 
   lemmy-ui:
-    image: dessalines/lemmy-ui:0.18.1-rc.10
+    image: docker.io/dessalines/lemmy-ui:0.19.0-beta.8
     environment:
       - LEMMY_UI_LEMMY_INTERNAL_HOST=lemmy:8536
       - LEMMY_UI_LEMMY_EXTERNAL_HOST=${domain}
       - LEMMY_UI_HTTPS=false
-      - LEMMY_UI_DEBUG=true
     volumes:
       - ./volumes/lemmy-ui/extra_themes:/app/extra_themes
     depends_on:
@@ -62,20 +58,28 @@ services:
     logging: *default-logging
 
   pictrs:
-    image: asonix/pictrs:0.4.0-rc.7
+    image: docker.io/asonix/pictrs:0.4.3
     # this needs to match the pictrs url in lemmy.hjson
     hostname: pictrs
     # we can set options to pictrs like this, here we set max. image size and forced format for conversion
     # entrypoint: /sbin/tini -- /usr/local/bin/pict-rs -p /mnt -m 4 --image-format webp
     environment:
-      - PICTRS__API_KEY=${postgres_password}
-      - RUST_LOG=debug
-      - RUST_BACKTRACE=full
+      - PICTRS__SERVER__API_KEY=${postgres_password}
       - PICTRS__MEDIA__VIDEO_CODEC=vp9
       - PICTRS__MEDIA__GIF__MAX_WIDTH=256
       - PICTRS__MEDIA__GIF__MAX_HEIGHT=256
       - PICTRS__MEDIA__GIF__MAX_AREA=65536
       - PICTRS__MEDIA__GIF__MAX_FRAME_COUNT=400
+      - RUST_LOG=debug
+      - RUST_BACKTRACE=full
+   #  - PICTRS_OPENTELEMETRY_URL=http://otel:4137
+   #  - PICTRS__STORE__TYPE=object_storage
+   #  - PICTRS__STORE__ENDPOINT='<S3 endpoint>'
+   #  - PICTRS__STORE__BUCKET_NAME='<bucket name>'
+   #  - PICTRS__STORE__REGION='<region>'
+   #  - PICTRS__STORE__USE_PATH_STYLE=false
+   #  - PICTRS__STORE__ACCESS_KEY='<access key>'
+   #  - PICTRS__STORE__SECRET_KEY='<secret key>'
     user: 991:991
     volumes:
       - ./volumes/pictrs:/mnt:Z
@@ -87,7 +91,7 @@ services:
           memory: 690m
 
   postgres:
-    image: postgres:15-alpine
+    image: docker.io/postgres:15-alpine
     hostname: postgres
     environment:
       - POSTGRES_USER=lemmy
