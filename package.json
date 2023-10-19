@@ -1,8 +1,8 @@
 {
   "scripts": {
-    "start": "docker-compose up -d --build && docker-compose logs --tail=all --follow",
+    "start": "docker-compose up -d && npm run logs-follow",
     "stop": "docker-compose down",
     "restart": "npm run stop && npm run start",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "logs-follow": "docker-compose logs --tail=all --follow"
   }
 }
