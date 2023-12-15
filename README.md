@@ -1,4 +1,16 @@
-# Start Lemmy Onion Service
+# Lemmy Onion Service
+
+### What is Lemmy?
+
+Lemmy is a self-hosted social link aggregation and discussion platform.
+
+I made this git repo for personal use for testing purposes.
+
+## New Lemmy instance
+
+Follow these instructions to start a new Lemmy instance using Linux and Docker.
+
+Note that federation is not supported and there's no email server.
 
 Clone the repo
 

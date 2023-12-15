@@ -7,14 +7,22 @@
     user: "lemmy"
     password: "_SED_2"
     database: "lemmy"
+    # pool_size: 95
+  }
+  pictrs: {
+    url: "http://pictrs:8080/"
+    api_key: "_SED_2"
+    cache_external_link_previews: true
+    upload_timeout: 30
+  }
+  federation: {
+    enabled: false
   }
   hostname: "_SED_1"
   bind: "0.0.0.0"
   port: 8536
   tls_enabled: false
-  pictrs: {
-    url: "http://pictrs:8080/"
-    api_key: "_SED_2"
-    cache_remote_images: true
-  }
+  # worker_count: 0
+  # retry_count: 0
+  cors_origin: "*"
 }

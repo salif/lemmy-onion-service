@@ -32,7 +32,7 @@ services:
       - lemmy-ui
 
   lemmy:
-    image: docker.io/dessalines/lemmy:0.19.0-rc.3
+    image: docker.io/dessalines/lemmy:0.19.0
     hostname: lemmy
     restart: always
     logging: *default-logging
@@ -45,7 +45,7 @@ services:
       - pictrs
 
   lemmy-ui:
-    image: docker.io/dessalines/lemmy-ui:0.19.0-rc.3
+    image: docker.io/dessalines/lemmy-ui:0.19.0
     environment:
       - LEMMY_UI_LEMMY_INTERNAL_HOST=lemmy:8536
       - LEMMY_UI_LEMMY_EXTERNAL_HOST=${domain}
@@ -101,4 +101,5 @@ services:
       - ./volumes/postgres:/var/lib/postgresql/data:Z
       - ./customPostgresql.conf:/etc/postgresql.conf
     restart: always
+    command: postgres -c config_file=/etc/postgresql.conf
     logging: *default-logging
